@@ -1,0 +1,40 @@
+version: '3.7'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.2
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=es-docker-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - 'es_data:/usr/share/elasticsearch/data'
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.4.2
+    container_name: kibana
+    ports:
+      - 5601:5601
+    depends_on: ['elasticsearch']
+
+  apm:
+    image: docker.elastic.co/apm/apm-server:7.4.2
+    container_name: apm_server
+    command: --strict.perms=false -e  # -e flag to log to stderr and disable syslog/file output
+    depends_on: ['elasticsearch', 'kibana']
+
+  web:
+    build: .
+    environment:
+      LOG_LEVEL: INFO
+      DEBUG_FLAG: 1
+      APM_SERVER_URL: http://apm:8200
+    ports:
+      - 8000:8000
+    restart: always
+
+volumes:
+  es_data:
